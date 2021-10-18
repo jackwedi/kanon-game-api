@@ -17,7 +17,11 @@ class Server {
 	public router = MasterRouter;
 }
 
-const whitelist = ["http://localhost:3000", "http://localhost:3001"];
+const whitelist = [
+	"http://localhost:3000",
+	"http://localhost:3001",
+	"https://kanongame-jk.herokuapp.com:5000",
+];
 
 const corsOptions = {
 	origin: (origin, callback) => {
@@ -42,6 +46,6 @@ server.app.use(cors(corsOptions));
 server.app.use("/api", server.router);
 
 // make server listen on some port
-((port = process.env.APP_PORT || 5000) => {
+((port = process.env.PORT || 5000) => {
 	server.app.listen(port, () => console.log(`> Listening on port ${port}`));
 })();
