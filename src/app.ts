@@ -21,6 +21,7 @@ const whitelist = [
 	"http://localhost:3000",
 	"http://localhost:3001",
 	"https://kanongame-jk.herokuapp.com:5000",
+	"https://kanongame-jk.herokuapp.com"
 ];
 
 const corsOptions = {
