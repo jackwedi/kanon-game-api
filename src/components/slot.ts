@@ -1,7 +1,12 @@
+import { assert } from "console";
 import * as _ from "lodash";
+import {
+	consecutiveCount as getConsecutiveCount,
+	shiftArray,
+} from "../utils/arraysUtils";
 
 const MIN_REEL_ROW_SHIFT = 1;
-
+const onlyAlphaCharactersRegExp = new RegExp("^(?=.*[a-zA-Z])[A-Za-z]+$");
 interface IWinningRule {
 	symbol: string;
 	combinations: ICombination[];
@@ -20,13 +25,14 @@ export interface IWinningDescription {
 
 export interface SlotConfig {
 	symbols: string[];
-	reels?: string[][];
-	rules?: IWinningRule[];
-	purse?: number;
-	stake?: number;
+	reels: string[][];
+	rules: IWinningRule[];
+	purse: number;
+	stake: number;
 }
 
 export default class Slot {
+	public symbols: string[];
 	public reels: string[][];
 	public initReels: string[][];
 	public winningRules: IWinningRule[];
@@ -34,13 +40,36 @@ export default class Slot {
 	public stake: number;
 
 	public constructor(config: SlotConfig) {
-		// Check same sizes
-		// Check only accepted symbols
+		// Check config
+		const undefinedProperties = [
+			config.symbols,
+			config.rules,
+			config.reels,
+			config.purse,
+			config.stake,
+		].filter((element) => element === undefined);
+		if (undefinedProperties.length > 0)
+			throw `Undefined Properties ${undefinedProperties}`;
 
-		this.winningRules = config.rules ?? [];
-		this.reels = config.reels ?? [];
-		this.purse = config.purse ?? 20;
-		this.stake = config.stake ?? 1;
+		// Check only accepted symbols
+		const validSymbols = config.symbols.every(
+			(symbol) => onlyAlphaCharactersRegExp.exec(symbol) !== null
+		);
+		if (!validSymbols) throw `Wrong Symbols ${config.symbols}`;
+
+		//Check all reels have the same size
+		const sameSizeReels = config.reels.every(
+			(reel) => reel.length === config.reels[0].length
+		);
+		if (!sameSizeReels) throw `Mismatch Reels size ${config.reels}`;
+
+		// Ensures symbols are uniques
+		this.symbols = _.uniq(config.symbols);
+
+		this.winningRules = config.rules;
+		this.reels = config.reels;
+		this.purse = config.purse;
+		this.stake = config.stake;
 
 		this.initReels = this.reels;
 	}
@@ -72,14 +101,7 @@ export default class Slot {
 				Math.random() * reel.length - 1 + MIN_REEL_ROW_SHIFT
 			);
 
-			// updates the reel with th offsetted rows
-			for (let oldIndex = 0; oldIndex < reel.length; oldIndex++) {
-				const newIndex: number =
-					(oldIndex + randomOffset) % reel.length;
-				reelCopy[newIndex] = reel[oldIndex];
-			}
-
-			updatedReels.push(reelCopy);
+			updatedReels.push(shiftArray(reelCopy, randomOffset));
 		}
 
 		this.reels = updatedReels;
@@ -91,20 +113,11 @@ export default class Slot {
 		return {
 			reels: this.reels,
 			purse: this.purse,
-			winnings: this.getWins(),
+			winnings,
 		};
 	}
 
-	public addWinningRules(...winningRules: IWinningRule[]): void {
-		this.winningRules.push(...winningRules);
-	}
-
-	public addReels(...reels: string[][]): void {
-		this.reels.push(...reels);
-		this.initReels.push(...reels);
-	}
-
-	private getWins(): {
+	public getWins(): {
 		wonAmount: number;
 		winningsDescription: IWinningDescription[];
 	} {
@@ -132,28 +145,11 @@ export default class Slot {
 		return { wonAmount, winningsDescription };
 	}
 
-	private consecutiveCount(row: string[]): any {
-		const count = _.countBy(row);
-		Object.keys(count).forEach((key) => (count[key] = 0));
-
-		let lastCell: string = null;
-		for (const cell of row) {
-			if (lastCell && lastCell === cell) {
-				count[cell] += 1;
-			} else if (count[cell] < 2) {
-				count[cell] = 1;
-			}
-			lastCell = cell;
-		}
-
-		return count;
-	}
-
 	private getWinningRule(row: string[]): {
 		rule: IWinningRule;
 		combinationIndex: number;
 	} {
-		const consecutiveCount = this.consecutiveCount(row);
+		const consecutiveCount = getConsecutiveCount(row);
 
 		for (const winningRule of this.winningRules) {
 			if (consecutiveCount[winningRule.symbol]) {

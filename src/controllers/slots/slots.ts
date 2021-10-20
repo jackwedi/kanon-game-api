@@ -61,6 +61,7 @@ const slotConfig: SlotConfig = {
 			combinations: [{ coins: 3, countToWin: 3 }],
 		},
 	],
+	purse: 20,
 };
 
 class SlotsController {
